@@ -80,7 +80,7 @@
 }
 
 - (NSString *)tableView:(UITableView *)tableView titleForDeleteConfirmationButtonForRowAtIndexPath:(NSIndexPath *)indexPath {
-    return @"Delete";
+    return @"";
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -92,8 +92,16 @@
     NSLog(@"MORE button pushed in row at: %@", indexPath.description);
 }
 
-- (NSString *)tableView:(UITableView *)tableView titleForMoreOptionButtonForRowAtIndexPath:(NSIndexPath *)indexPath {
-    return @"More";
+//- (NSString *)tableView:(UITableView *)tableView titleForMoreOptionButtonForRowAtIndexPath:(NSIndexPath *)indexPath {
+//    return @"More";
+//}
+
+- (UIImage*)tableView:(UITableView *)tableView imageForDeleteConfirmationButtonForRowAtIndexPath:(NSIndexPath *)indexPath{
+    return [UIImage imageNamed:@"trash-normal"];
+}
+
+- (UIImage*)tableView:(UITableView *)tableView imageForMoreOptionButtonForRowAtIndexPath:(NSIndexPath *)indexPath{
+    return [UIImage imageNamed:@"route-normal"];
 }
 
 @end

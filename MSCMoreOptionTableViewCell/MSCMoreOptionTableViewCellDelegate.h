@@ -25,6 +25,8 @@
  */
 - (NSString *)tableView:(UITableView *)tableView titleForMoreOptionButtonForRowAtIndexPath:(NSIndexPath *)indexPath;
 
+- (UIImage*)tableView:(UITableView *)tableView imageForMoreOptionButtonForRowAtIndexPath:(NSIndexPath *)indexPath;
+
 /*
  * If not implemented or returning nil the "More" button will have [UIColor whiteColor]
  * as titleColor.
@@ -43,6 +45,8 @@
  * If not implemented or returning nil the "Delete" button will have the default backgroundColor.
  */
 - (UIColor *)tableView:(UITableView *)tableView backgroundColorForDeleteConfirmationButtonForRowAtIndexPath:(NSIndexPath *)indexPath;
+
+- (UIImage*)tableView:(UITableView *)tableView imageForDeleteConfirmationButtonForRowAtIndexPath:(NSIndexPath *)indexPath;
 
 /*
  * If not implemented or returning nil the "Delete" button will have the default titleColor.

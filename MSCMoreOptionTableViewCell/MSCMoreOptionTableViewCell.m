@@ -8,8 +8,21 @@
 
 #import "MSCMoreOptionTableViewCell.h"
 
+typedef struct
+{
+    unsigned moreOptionButtonPressedInRowAtIndexPath : 1;
+    unsigned titleForMoreOptionButtonForRowAtIndexPath : 1;
+    unsigned imageForMoreOptionButtonForRowAtIndexPath : 1;
+    unsigned titleColorForMoreOptionButtonForRowAtIndexPath : 1;
+    unsigned backgroundColorForMoreOptionButtonForRowAtIndexPath : 1;
+    unsigned backgroundColorForDeleteConfirmationButtonForRowAtIndexPath : 1;
+    unsigned imageForDeleteConfirmationButtonForRowAtIndexPath : 1;
+    unsigned titleColorForDeleteConfirmationButtonForRowAtIndexPath : 1;
+} MSCMoreOptionTableViewCellDelegateAbilities;
+
 @interface MSCMoreOptionTableViewCell ()
 
+@property (nonatomic, assign) MSCMoreOptionTableViewCellDelegateAbilities delegateHas;
 @property (nonatomic, strong) UIButton *moreOptionButton;
 @property (nonatomic, strong) UIScrollView *cellScrollView;
 
@@ -47,6 +60,23 @@
     [self.cellScrollView.layer removeObserver:self forKeyPath:@"sublayers" context:nil];
 }
 
+- (void)setDelegate:(id<MSCMoreOptionTableViewCellDelegate>)delegate {
+    if (delegate != _delegate) {
+        _delegate = delegate;
+        MSCMoreOptionTableViewCellDelegateAbilities delegateAbilities = {};
+        delegateAbilities.backgroundColorForDeleteConfirmationButtonForRowAtIndexPath = [_delegate respondsToSelector:@selector(tableView:backgroundColorForDeleteConfirmationButtonForRowAtIndexPath:)];
+        delegateAbilities.backgroundColorForMoreOptionButtonForRowAtIndexPath = [_delegate respondsToSelector:@selector(tableView:backgroundColorForMoreOptionButtonForRowAtIndexPath:)];
+        delegateAbilities.moreOptionButtonPressedInRowAtIndexPath = [_delegate respondsToSelector:@selector(tableView:moreOptionButtonPressedInRowAtIndexPath:)];
+        delegateAbilities.titleColorForDeleteConfirmationButtonForRowAtIndexPath = [_delegate respondsToSelector:@selector(tableView:titleColorForDeleteConfirmationButtonForRowAtIndexPath:)];
+        delegateAbilities.titleColorForMoreOptionButtonForRowAtIndexPath = [_delegate respondsToSelector:@selector(tableView:titleColorForMoreOptionButtonForRowAtIndexPath:)];
+        delegateAbilities.titleForMoreOptionButtonForRowAtIndexPath = [_delegate respondsToSelector:@selector(tableView:titleForMoreOptionButtonForRowAtIndexPath:)];
+
+        delegateAbilities.imageForDeleteConfirmationButtonForRowAtIndexPath = [_delegate respondsToSelector:@selector(tableView:imageForDeleteConfirmationButtonForRowAtIndexPath:)];
+        delegateAbilities.imageForMoreOptionButtonForRowAtIndexPath = [_delegate respondsToSelector:@selector(tableView:imageForMoreOptionButtonForRowAtIndexPath:)];
+        self.delegateHas = delegateAbilities;
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////
 #pragma mark - NSObject(NSKeyValueObserving)
 ////////////////////////////////////////////////////////////////////////
@@ -72,65 +102,42 @@
                     else {
                         UIView *deleteConfirmationView = layer.delegate;
                         UITableView *tableView = [self tableView];
+                        NSIndexPath* indexPath = [tableView indexPathForCell:self];
+                        UIButton *deleteConfirmationButton = [self deleteButtonFromDeleteConfirmationView:deleteConfirmationView];
 
-                        // Try to get "Delete" backgroundColor from delegate
-                        if ([self.delegate respondsToSelector:@selector(tableView:backgroundColorForDeleteConfirmationButtonForRowAtIndexPath:)]) {
-                            UIButton *deleteConfirmationButton = [self deleteButtonFromDeleteConfirmationView:deleteConfirmationView];
-                            if (deleteConfirmationButton) {
-                                UIColor *deleteButtonColor = [self.delegate tableView:tableView backgroundColorForDeleteConfirmationButtonForRowAtIndexPath:[tableView indexPathForCell:self]];
-                                if (deleteButtonColor) {
-                                    deleteConfirmationButton.backgroundColor = deleteButtonColor;
-                                }
-                            }
+                        UIColor *deleteButtonColor = (self.delegateHas.backgroundColorForDeleteConfirmationButtonForRowAtIndexPath ? [self.delegate tableView:tableView backgroundColorForDeleteConfirmationButtonForRowAtIndexPath:[tableView indexPathForCell:self]] : nil );
+
+                        if (deleteButtonColor) {
+                            deleteConfirmationButton.backgroundColor = deleteButtonColor;
                         }
 
-                        // Try to get "Delete" titleColor from Delegate
-                        if ([self.delegate respondsToSelector:@selector(tableView:titleColorForDeleteConfirmationButtonForRowAtIndexPath:)]) {
-                            UIButton *deleteConfirmationButton = [self deleteButtonFromDeleteConfirmationView:deleteConfirmationView];
-                            if (deleteConfirmationButton) {
-                                UIColor *deleteButtonTitleColor = [self.delegate tableView:tableView titleColorForDeleteConfirmationButtonForRowAtIndexPath:[tableView indexPathForCell:self]];
-                                if (deleteButtonTitleColor) {
-                                    for (UIView *label in deleteConfirmationButton.subviews) {
-                                        if ([label isKindOfClass:[UILabel class]]) {
-                                            [(UILabel*)label setTextColor:deleteButtonTitleColor];
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
+                        UIColor *deleteButtonTitleColor = (self.delegateHas.titleColorForDeleteConfirmationButtonForRowAtIndexPath ? [self.delegate tableView:tableView titleColorForDeleteConfirmationButtonForRowAtIndexPath:[tableView indexPathForCell:self]] : nil );
+
+                        if (deleteButtonColor) {
+                            deleteConfirmationButton.titleLabel.textColor = deleteButtonTitleColor;
                         }
 
-                        if ([self moreOptionButtonTitle]) {
+                        UIImage* deleteImage = (self.delegateHas.imageForDeleteConfirmationButtonForRowAtIndexPath ? [self.delegate tableView:tableView imageForDeleteConfirmationButtonForRowAtIndexPath:indexPath] : nil);
+                        [deleteConfirmationButton setImage:deleteImage forState:UIControlStateNormal];
+
+                        NSString* title = (self.delegateHas.titleForMoreOptionButtonForRowAtIndexPath ? [self.delegate tableView:tableView titleForMoreOptionButtonForRowAtIndexPath:indexPath] : nil );
+                        UIImage* image = (self.delegateHas.imageForMoreOptionButtonForRowAtIndexPath ? [self.delegate tableView:tableView imageForMoreOptionButtonForRowAtIndexPath:indexPath] : nil);
+
+                        if (title != nil || image != nil)
+                        {
                             self.moreOptionButton = [[UIButton alloc] initWithFrame:CGRectZero];
                             [self.moreOptionButton addTarget:self action:@selector(moreOptionButtonPressed:) forControlEvents:UIControlEventTouchUpInside];
-
+                            [self setMoreOptionButtonTitle:title image:image inDeleteConfirmationView:deleteConfirmationView];
                             // Set "More" button's numberOfLines to 0 to enable support for multiline titles.
                             self.moreOptionButton.titleLabel.numberOfLines = 0;
 
-                            /*
-                             * Get "More" title from delegate. Doesn't have to check if delegate responds
-                             * because this must be otherwise the "if"-clause wouldn't have been entered.
-                             */
-                            [self setMoreOptionButtonTitle:[self.delegate tableView:tableView titleForMoreOptionButtonForRowAtIndexPath:[tableView indexPathForCell:self]] inDeleteConfirmationView:deleteConfirmationView];
-
                             // Try to get "More" titleColor from delegate
-                            UIColor *titleColor = nil;
-                            if ([self.delegate respondsToSelector:@selector(tableView:titleColorForMoreOptionButtonForRowAtIndexPath:)]) {
-                                titleColor = [self.delegate tableView:tableView titleColorForMoreOptionButtonForRowAtIndexPath:[tableView indexPathForCell:self]];
-                            }
-                            if (titleColor == nil) {
-                                titleColor = [UIColor whiteColor];
-                            }
+                            UIColor *titleColor = (self.delegateHas.titleColorForMoreOptionButtonForRowAtIndexPath ? [self.delegate tableView:tableView titleColorForMoreOptionButtonForRowAtIndexPath:[tableView indexPathForCell:self]] : [UIColor whiteColor]);
+
                             [self.moreOptionButton setTitleColor:titleColor forState:UIControlStateNormal];
 
                             // Try to get "More" backgroundColor from delegate
-                            UIColor *backgroundColor = nil;
-                            if ([self.delegate respondsToSelector:@selector(tableView:backgroundColorForMoreOptionButtonForRowAtIndexPath:)]) {
-                                backgroundColor = [self.delegate tableView:tableView backgroundColorForMoreOptionButtonForRowAtIndexPath:[tableView indexPathForCell:self]];
-                            }
-                            if (backgroundColor == nil) {
-                                backgroundColor = [UIColor lightGrayColor];
-                            }
+                            UIColor *backgroundColor = (self.delegateHas.backgroundColorForMoreOptionButtonForRowAtIndexPath ? [self.delegate tableView:tableView backgroundColorForMoreOptionButtonForRowAtIndexPath:[tableView indexPathForCell:self]] : [UIColor lightGrayColor] );
                             [self.moreOptionButton setBackgroundColor:backgroundColor];
 
                             // Add the "More" button to the cell's view hierarchy
@@ -167,7 +174,7 @@
 }
 
 - (void)moreOptionButtonPressed:(id)sender {
-    if ([self.delegate respondsToSelector:@selector(tableView:moreOptionButtonPressedInRowAtIndexPath:)]) {
+    if (self.delegateHas.moreOptionButtonPressedInRowAtIndexPath) {
         [self.delegate tableView:[self tableView] moreOptionButtonPressedInRowAtIndexPath:[[self tableView] indexPathForCell:self]];
     }
 }
@@ -185,10 +192,11 @@
     return nil;
 }
 
-- (void)setMoreOptionButtonTitle:(NSString *)title inDeleteConfirmationView:(UIView *)deleteConfirmationView {
+- (void)setMoreOptionButtonTitle:(NSString *)title image:(UIImage*)image inDeleteConfirmationView:(UIView *)deleteConfirmationView {
     CGFloat priorMoreOptionButtonFrameWidth = self.moreOptionButton.frame.size.width;
 
     [self.moreOptionButton setTitle:title forState:UIControlStateNormal];
+    [self.moreOptionButton setImage:image forState:UIControlStateNormal];
     [self.moreOptionButton sizeToFit];
 
     CGRect moreOptionButtonFrame = CGRectZero;
@@ -228,17 +236,6 @@
             break;
         }
     }
-}
-
-- (NSString *)moreOptionButtonTitle {
-    UITableView *tableView = [self tableView];
-
-    NSString *moreTitle = nil;
-    if ([self.delegate respondsToSelector:@selector(tableView:titleForMoreOptionButtonForRowAtIndexPath:)]) {
-        moreTitle = [self.delegate tableView:tableView titleForMoreOptionButtonForRowAtIndexPath:[tableView indexPathForCell:self]];
-    }
-    
-    return moreTitle;
 }
 
 @end

@@ -8,7 +8,7 @@
 
 #import "MSCMoreOptionTableViewCellDelegate.h"
 
-@interface MSCMoreOptionTableViewCell : UITableViewCell
+@interface MSCMoreOptionTableViewCell : UITableViewCell 
 
 @property (nonatomic, weak) id<MSCMoreOptionTableViewCellDelegate> delegate;
 
